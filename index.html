@@ -23,6 +23,8 @@
   h2{font-size:15px;color:#8b949e;margin:24px 0 4px}
 </style></head><body>
 <h1>&#8675; Tor2cloud Sorter</h1>
+<label for="pw">Passcode</label>
+<input id="pw" type="password" placeholder="Required" autocomplete="off">
 <label for="link">Magnet / .torrent / direct video link</label>
 <input id="link" type="url" placeholder="magnet:?xt=... or https://..." autocomplete="off">
 <label for="cat">Category (FileLu folder)</label>
@@ -39,6 +41,10 @@
 <h2>Active jobs</h2>
 <div id="jobs">loading...</div>
 <script>
+const pwEl=document.getElementById('pw');
+pwEl.value=localStorage.getItem('t2c_pw')||'';
+pwEl.onchange=()=>{localStorage.setItem('t2c_pw',pwEl.value.trim());loadJobs();};
+function hdr(){return {'x-ui-passcode':(localStorage.getItem('t2c_pw')||'')};}
 const sel=document.getElementById('cat'),cust=document.getElementById('catcustom');
 sel.onchange=()=>{cust.style.display=sel.value==='__custom'?'block':'none';};
 function cat(){return sel.value==='__custom'?(cust.value.trim()||'Movies/English'):sel.value;}
@@ -49,7 +55,7 @@ async function submitJob(){
   document.getElementById('go').disabled=true;
   msg.className='';msg.textContent='Starting...';
   try{
-    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/new',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({link,category:cat()})});
+    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/new',{method:'POST',headers:{'content-type':'application/json',...hdr()},body:JSON.stringify({link,category:cat()})});
     const j=await r.json();
     if(!r.ok)throw new Error(j.error||r.status);
     msg.textContent='Started. Track it here or on the issue: '+j.issue_url;
@@ -65,8 +71,9 @@ function bar(pct){
 async function loadJobs(){
   const box=document.getElementById('jobs');
   try{
-    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/jobs');
+    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/jobs',{headers:hdr()});
     const j=await r.json();
+    if(r.status===401){box.innerHTML='<div class="meta">Enter the passcode above to see jobs.</div>';return;}
     if(!j.length){box.innerHTML='<div class="meta">No active jobs.</div>';return;}
     box.innerHTML=j.map(function(x){
       return '<div class="job '+x.state+'"><a href="'+x.url+'">'+x.title+'</a>'
