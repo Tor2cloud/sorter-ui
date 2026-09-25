@@ -125,7 +125,9 @@ async function saveSeedr(){
     const r=await fetch(API+'/api/seedr-session',{method:'POST',headers:{'content-type':'application/json',...hdr()},body:JSON.stringify({cookie})});
     const d=await r.json();
     if(r.ok&&d.ok){
-      m.className='ok'; m.textContent='Session saved - Seedr is logged in.';
+      const gh=d.gh_secret||{};
+      m.className='ok';
+      m.textContent='Session saved - Seedr is logged in.' + (gh.ok?' CI secret installed - downloads can run.':(gh.skipped?'':' (warning: CI secret install failed - tell Prasanna)'));
       document.getElementById('seedrcookie').value='';
       seedrHealth();
     }else{
