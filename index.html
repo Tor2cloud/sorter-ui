@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tor2cloud Sorter</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0d1117;color:#e6edf3;font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:16px;max-width:640px;margin:0 auto}
+  h1{font-size:20px;margin:8px 0 16px}
+  label{display:block;font-size:13px;color:#8b949e;margin:14px 0 4px}
+  input,select{width:100%;padding:12px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font-size:16px}
+  button{width:100%;margin-top:16px;padding:14px;border:0;border-radius:8px;background:#238636;color:#fff;font-size:17px;font-weight:600}
+  button:disabled{background:#21262d;color:#8b949e}
+  .job{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;margin-top:12px}
+  .job a{color:#58a6ff;word-break:break-all;text-decoration:none;font-size:15px}
+  .bar{height:10px;background:#21262d;border-radius:5px;margin-top:8px;overflow:hidden}
+  .bar>div{height:100%;background:#2ea043;transition:width .5s}
+  .meta{font-size:13px;color:#8b949e;margin-top:6px;white-space:pre-wrap}
+  .failed .bar>div{background:#f85149}
+  .done .bar>div{background:#a371f7}
+  #msg{margin-top:12px;font-size:14px;color:#3fb950;white-space:pre-wrap}
+  #msg.err{color:#f85149}
+  h2{font-size:15px;color:#8b949e;margin:24px 0 4px}
+</style></head><body>
+<h1>&#8675; Tor2cloud Sorter</h1>
+<label for="link">Magnet / .torrent / direct video link</label>
+<input id="link" type="url" placeholder="magnet:?xt=... or https://..." autocomplete="off">
+<label for="cat">Category (FileLu folder)</label>
+<select id="cat">
+  <option>Movies/English</option>
+  <option>Movies/Tamil</option>
+  <option>Movies/Malayalam</option>
+  <option>Apps/Linux</option>
+  <option value="__custom">Custom...</option>
+</select>
+<input id="catcustom" type="text" placeholder="Custom folder, e.g. Movies/Telugu" style="display:none;margin-top:8px">
+<button id="go" onclick="submitJob()">Start download</button>
+<div id="msg"></div>
+<h2>Active jobs</h2>
+<div id="jobs">loading...</div>
+<script>
+const sel=document.getElementById('cat'),cust=document.getElementById('catcustom');
+sel.onchange=()=>{cust.style.display=sel.value==='__custom'?'block':'none';};
+function cat(){return sel.value==='__custom'?(cust.value.trim()||'Movies/English'):sel.value;}
+async function submitJob(){
+  const link=document.getElementById('link').value.trim();
+  const msg=document.getElementById('msg');
+  if(!link){msg.className='err';msg.textContent='Paste a link first.';return;}
+  document.getElementById('go').disabled=true;
+  msg.className='';msg.textContent='Starting...';
+  try{
+    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/new',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({link,category:cat()})});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||r.status);
+    msg.textContent='Started. Track it here or on the issue: '+j.issue_url;
+    document.getElementById('link').value='';
+    loadJobs();
+  }catch(e){msg.className='err';msg.textContent='Failed: '+e.message;}
+  document.getElementById('go').disabled=false;
+}
+function bar(pct){
+  pct=Math.max(0,Math.min(100,pct|0));
+  return '<div class="bar"><div style="width:'+pct+'%"></div></div>';
+}
+async function loadJobs(){
+  const box=document.getElementById('jobs');
+  try{
+    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/jobs');
+    const j=await r.json();
+    if(!j.length){box.innerHTML='<div class="meta">No active jobs.</div>';return;}
+    box.innerHTML=j.map(function(x){
+      return '<div class="job '+x.state+'"><a href="'+x.url+'">'+x.title+'</a>'
+        +bar(x.pct)+'<div class="meta">'+x.status+'</div></div>';
+    }).join('');
+  }catch(e){box.innerHTML='<div class="meta">status error: '+e.message+'</div>';}
+}
+loadJobs(); setInterval(loadJobs,10000);
+</script></body></html>
