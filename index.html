@@ -21,30 +21,65 @@
   #msg{margin-top:12px;font-size:14px;color:#3fb950;white-space:pre-wrap}
   #msg.err{color:#f85149}
   h2{font-size:15px;color:#8b949e;margin:24px 0 4px}
+  #gate{max-width:360px;margin:18vh auto 0}
+  #gate .err{color:#f85149;font-size:14px;margin-top:10px;min-height:20px}
+  #app{display:none}
+  .tl{margin-top:8px;border-left:2px solid #30363d;padding-left:10px}
+  .tl div{font-size:13px;color:#c9d1d9;margin:3px 0;white-space:pre-wrap}
+  .tl .t{color:#8b949e;font-size:12px;margin-right:6px}
+  .tl .warn{color:#f0883e}
 </style></head><body>
-<h1>&#8675; Tor2cloud Sorter</h1>
-<label for="pw">Passcode</label>
-<input id="pw" type="password" placeholder="Required" autocomplete="off">
-<label for="link">Magnet / .torrent / direct video link</label>
-<input id="link" type="url" placeholder="magnet:?xt=... or https://..." autocomplete="off">
-<label for="cat">Category (FileLu folder)</label>
-<select id="cat">
-  <option>Movies/English</option>
-  <option>Movies/Tamil</option>
-  <option>Movies/Malayalam</option>
-  <option>Apps/Linux</option>
-  <option value="__custom">Custom...</option>
-</select>
-<input id="catcustom" type="text" placeholder="Custom folder, e.g. Movies/Telugu" style="display:none;margin-top:8px">
-<button id="go" onclick="submitJob()">Start download</button>
-<div id="msg"></div>
-<h2>Active jobs</h2>
-<div id="jobs">loading...</div>
+
+<div id="gate">
+  <h1>&#8675; Tor2cloud Sorter</h1>
+  <label for="pw">Passcode</label>
+  <input id="pw" type="password" placeholder="Required" autocomplete="off">
+  <button id="unlock" onclick="unlock()">Unlock</button>
+  <div class="err" id="gateerr"></div>
+</div>
+
+<div id="app">
+  <h1>&#8675; Tor2cloud Sorter</h1>
+  <label for="link">Magnet / .torrent / direct video link</label>
+  <input id="link" type="url" placeholder="magnet:?xt=... or https://..." autocomplete="off">
+  <label for="cat">Category (FileLu folder)</label>
+  <select id="cat">
+    <option>Movies/English</option>
+    <option>Movies/Tamil</option>
+    <option>Movies/Malayalam</option>
+    <option>Apps/Linux</option>
+    <option value="__custom">Custom...</option>
+  </select>
+  <input id="catcustom" type="text" placeholder="Custom folder, e.g. Movies/Telugu" style="display:none;margin-top:8px">
+  <button id="go" onclick="submitJob()">Start download</button>
+  <div id="msg"></div>
+  <h2>Jobs</h2>
+  <div id="jobs">loading...</div>
+</div>
+
 <script>
-const pwEl=document.getElementById('pw');
-pwEl.value=localStorage.getItem('t2c_pw')||'';
-pwEl.onchange=()=>{localStorage.setItem('t2c_pw',pwEl.value.trim());loadJobs();};
+const API='https://tor2cloud-sorter.divyaprabandam.workers.dev';
 function hdr(){return {'x-ui-passcode':(localStorage.getItem('t2c_pw')||'')};}
+async function unlock(){
+  const pw=document.getElementById('pw').value.trim();
+  const err=document.getElementById('gateerr');
+  if(!pw){err.textContent='Enter the passcode.';return;}
+  document.getElementById('unlock').disabled=true;
+  err.textContent='Checking...';
+  try{
+    const r=await fetch(API+'/api/jobs',{headers:{'x-ui-passcode':pw}});
+    if(r.status===401){err.textContent='Wrong passcode.';document.getElementById('unlock').disabled=false;return;}
+    if(!r.ok)throw new Error('API '+r.status);
+    localStorage.setItem('t2c_pw',pw);
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    renderJobs(await r.json());
+    setInterval(loadJobs,10000);
+  }catch(e){err.textContent='Cannot reach the service. Try again.';document.getElementById('unlock').disabled=false;}
+}
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')unlock();});
+const saved=localStorage.getItem('t2c_pw');
+if(saved){document.getElementById('pw').value=saved;unlock();}
 const sel=document.getElementById('cat'),cust=document.getElementById('catcustom');
 sel.onchange=()=>{cust.style.display=sel.value==='__custom'?'block':'none';};
 function cat(){return sel.value==='__custom'?(cust.value.trim()||'Movies/English'):sel.value;}
@@ -55,8 +90,9 @@ async function submitJob(){
   document.getElementById('go').disabled=true;
   msg.className='';msg.textContent='Starting...';
   try{
-    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/new',{method:'POST',headers:{'content-type':'application/json',...hdr()},body:JSON.stringify({link,category:cat()})});
+    const r=await fetch(API+'/api/new',{method:'POST',headers:{'content-type':'application/json',...hdr()},body:JSON.stringify({link,category:cat()})});
     const j=await r.json();
+    if(r.status===401){lockOut();return;}
     if(!r.ok)throw new Error(j.error||r.status);
     msg.textContent='Started. Track it here or on the issue: '+j.issue_url;
     document.getElementById('link').value='';
@@ -64,22 +100,40 @@ async function submitJob(){
   }catch(e){msg.className='err';msg.textContent='Failed: '+e.message;}
   document.getElementById('go').disabled=false;
 }
+function lockOut(){
+  localStorage.removeItem('t2c_pw');
+  document.getElementById('app').style.display='none';
+  document.getElementById('gate').style.display='block';
+  document.getElementById('gateerr').textContent='Session expired - enter the passcode again.';
+}
 function bar(pct){
   pct=Math.max(0,Math.min(100,pct|0));
   return '<div class="bar"><div style="width:'+pct+'%"></div></div>';
 }
-async function loadJobs(){
-  const box=document.getElementById('jobs');
-  try{
-    const r=await fetch('https://tor2cloud-sorter.divyaprabandam.workers.dev/api/jobs',{headers:hdr()});
-    const j=await r.json();
-    if(r.status===401){box.innerHTML='<div class="meta">Enter the passcode above to see jobs.</div>';return;}
-    if(!j.length){box.innerHTML='<div class="meta">No active jobs.</div>';return;}
-    box.innerHTML=j.map(function(x){
-      return '<div class="job '+x.state+'"><a href="'+x.url+'">'+x.title+'</a>'
-        +bar(x.pct)+'<div class="meta">'+x.status+'</div></div>';
-    }).join('');
-  }catch(e){box.innerHTML='<div class="meta">status error: '+e.message+'</div>';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function fmt(ts){
+  try{return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}catch(e){return '';}
 }
-loadJobs(); setInterval(loadJobs,10000);
+function timeline(tl){
+  if(!tl||!tl.length)return '';
+  return '<div class="tl">'+tl.map(function(e){
+    const warn=/fail|warn|stall|error/i.test(e.text)?' warn':'';
+    return '<div class="'+warn.trim()+'"><span class="t">'+fmt(e.ts)+'</span>'+esc(e.text)+'</div>';
+  }).join('')+'</div>';
+}
+function renderJobs(j){
+  const box=document.getElementById('jobs');
+  if(!j.length){box.innerHTML='<div class="meta">No jobs yet. Paste a link above to start one.</div>';return;}
+  box.innerHTML=j.map(function(x){
+    return '<div class="job '+x.state+'"><a href="'+x.url+'">'+esc(x.title)+'</a>'
+      +bar(x.pct)+timeline(x.timeline)+'</div>';
+  }).join('');
+}
+async function loadJobs(){
+  try{
+    const r=await fetch(API+'/api/jobs',{headers:hdr()});
+    if(r.status===401){lockOut();return;}
+    renderJobs(await r.json());
+  }catch(e){/* keep last render on transient errors */}
+}
 </script></body></html>
