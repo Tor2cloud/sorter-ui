@@ -28,6 +28,11 @@
   .tl div{font-size:13px;color:#c9d1d9;margin:3px 0;white-space:pre-wrap}
   .tl .t{color:#8b949e;font-size:12px;margin-right:6px}
   .tl .warn{color:#f0883e}
+  #quota{font-size:12px;color:#8b949e;margin-top:-8px;margin-bottom:10px}
+  .chips{display:flex;gap:6px;margin:24px 0 4px}
+  .chips button{flex:1;margin-top:0;padding:8px;border-radius:6px;background:#21262d;color:#8b949e;font-size:13px;font-weight:600;border:1px solid #30363d}
+  .chips button.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
+  .thumb{width:64px;height:64px;object-fit:cover;border-radius:6px;margin-top:8px;display:block}
 </style></head><body>
 
 <div id="gate">
@@ -40,6 +45,7 @@
 
 <div id="app">
   <h1>&#8675; Tor2cloud Sorter</h1>
+  <div id="quota"></div>
   <label for="link">Magnet / .torrent / direct video link</label>
   <input id="link" type="url" placeholder="magnet:?xt=... or https://..." autocomplete="off">
   <label for="cat">Category (FileLu folder)</label>
@@ -53,13 +59,32 @@
   <input id="catcustom" type="text" placeholder="Custom folder, e.g. Movies/Telugu" style="display:none;margin-top:8px">
   <button id="go" onclick="submitJob()">Start download</button>
   <div id="msg"></div>
-  <h2>Jobs</h2>
+  <div class="chips">
+    <button data-f="active" class="on" onclick="setFilter('active',this)">Active</button>
+    <button data-f="stalled" onclick="setFilter('stalled',this)">Stalled</button>
+    <button data-f="done" onclick="setFilter('done',this)">Done</button>
+    <button data-f="failed" onclick="setFilter('failed',this)">Failed</button>
+  </div>
   <div id="jobs">loading...</div>
 </div>
 
 <script>
 const API='https://tor2cloud-sorter.divyaprabandam.workers.dev';
 function hdr(){return {'x-ui-passcode':(localStorage.getItem('t2c_pw')||'')};}
+let curFilter='active';
+function setFilter(f,btn){
+  curFilter=f;
+  document.querySelectorAll('.chips button').forEach(b=>b.classList.toggle('on',b===btn));
+  loadJobs();
+}
+async function loadQuota(){
+  try{
+    const r=await fetch(API+'/api/quota',{headers:hdr()});
+    if(!r.ok)return;
+    const q=await r.json();
+    if(q.storage_used!=null)document.getElementById('quota').textContent='FileLu: '+q.storage_used+' / '+q.storage+' GB used';
+  }catch(e){}
+}
 async function unlock(){
   const pw=document.getElementById('pw').value.trim();
   const err=document.getElementById('gateerr');
@@ -74,6 +99,7 @@ async function unlock(){
     document.getElementById('gate').style.display='none';
     document.getElementById('app').style.display='block';
     renderJobs(await r.json());
+    loadQuota(); setInterval(loadQuota,300000);
     setInterval(loadJobs,10000);
   }catch(e){err.textContent='Cannot reach the service. Try again.';document.getElementById('unlock').disabled=false;}
 }
@@ -123,15 +149,16 @@ function timeline(tl){
 }
 function renderJobs(j){
   const box=document.getElementById('jobs');
-  if(!j.length){box.innerHTML='<div class="meta">No jobs yet. Paste a link above to start one.</div>';return;}
+  if(!j.length){box.innerHTML='<div class="meta">'+(curFilter==='active'?'No active jobs. Paste a link above to start one.':'No '+curFilter+' jobs.')+'</div>';return;}
   box.innerHTML=j.map(function(x){
     return '<div class="job '+x.state+'"><a href="'+x.url+'">'+esc(x.title)+'</a>'
-      +bar(x.pct)+timeline(x.timeline)+'</div>';
+      +bar(x.pct)+(x.thumb?'<img class="thumb" src="'+x.thumb+'" alt="">':'')
+      +timeline(x.timeline)+'</div>';
   }).join('');
 }
 async function loadJobs(){
   try{
-    const r=await fetch(API+'/api/jobs',{headers:hdr()});
+    const r=await fetch(API+'/api/jobs?filter='+curFilter,{headers:hdr()});
     if(r.status===401){lockOut();return;}
     renderJobs(await r.json());
   }catch(e){/* keep last render on transient errors */}
