@@ -65,6 +65,7 @@
 <div id="app">
   <h1>&#8675; Tor2cloud Sorter</h1>
   <div id="quota"></div>
+  <div id="hb" style="font-size:12px;color:#8b949e;margin:-6px 0 8px"></div>
   <div id="seedr" class="warn">Seedr: checking...<a href="#" onclick="toggleSeedr();return false" id="seedrtoggle" style="display:none">refresh session</a></div>
   <div id="seedrbox" style="display:none">
     <textarea id="seedrcookie" rows="3" placeholder="Paste the cookie header from a logged-in seedr.cc tab: F12 -> Network -> click any /api request -> Headers -> Request Headers -> copy the whole cookie: value"></textarea>
@@ -188,6 +189,17 @@ function setFilter(f,btn){
   document.querySelectorAll('.chips button').forEach(b=>b.classList.toggle('on',b===btn));
   loadJobs();
 }
+async function loadHeartbeat(){
+  try{
+    const r=await fetch(API+'/api/heartbeat',{headers:hdr()});
+    if(!r.ok)return;
+    const x=await r.json();
+    const el=document.getElementById('hb');
+    if(x.age_minutes==null){el.textContent='Pipeline: no poll heartbeat yet';el.style.color='#f0883e';}
+    else if(x.age_minutes>20){el.textContent='Pipeline last ran '+x.age_minutes+' min ago - it may be down';el.style.color='#f85149';}
+    else{el.textContent='Pipeline ran '+x.age_minutes+' min ago';el.style.color='#8b949e';}
+  }catch(e){}
+}
 async function loadQuota(){
   try{
     const r=await fetch(API+'/api/quota',{headers:hdr()});
@@ -212,6 +224,7 @@ async function unlock(){
     document.getElementById('app').style.display='block';
     renderJobs(await r.json());
     loadQuota(); setInterval(loadQuota,300000);
+    loadHeartbeat(); setInterval(loadHeartbeat,300000);
     setInterval(loadJobs,10000);
   }catch(e){err.textContent='Cannot reach the service. Try again.';document.getElementById('unlock').disabled=false;}
 }
