@@ -66,7 +66,7 @@
   <h1>&#8675; Tor2cloud Sorter</h1>
   <div id="quota"></div>
   <div id="hb" style="font-size:12px;color:#8b949e;margin:-6px 0 8px"></div>
-  <div id="seedr" class="warn">Seedr: checking...<a href="#" onclick="toggleSeedr();return false" id="seedrtoggle" style="display:none">refresh session</a><a href="#" onclick="return showSeedrSteps()" id="seedrhelp" style="display:none;color:#58a6ff;margin-left:8px;text-decoration:none;font-weight:700" title="How to copy the cookie">?</a></div>
+  <div id="seedr" class="warn">Seedr: checking...<a href="#" onclick="toggleSeedr();return false" id="seedrtoggle" style="display:none">refresh session</a></div>
   <div id="seedrbox" style="display:none">
     <ol id="seedrsteps" style="margin:6px 0 8px;padding-left:20px;font-size:13px;color:#c9d1d9;line-height:1.7">
       <li>Open <b>seedr.cc</b> and log in.</li>
@@ -153,13 +153,11 @@ async function seedrHealth(){
       el.firstChild.textContent='Seedr: logged in - '+fmtGB(d.used_bytes)+' / '+fmtGB(d.total_bytes)+' used';
       document.getElementById('seedrbox').style.display='none';
       document.getElementById('seedrtoggle').style.display='inline';
-      document.getElementById('seedrhelp').style.display='inline';
     }else if(d.state==='requires_login'){
       el.className='bad';
       el.firstChild.textContent='Seedr: requires login - paste a fresh cookie below to refresh the session';
       document.getElementById('seedrbox').style.display='block';
       document.getElementById('seedrtoggle').style.display='none';
-      document.getElementById('seedrhelp').style.display='none';
     }else{
       el.className='warn';
       el.firstChild.textContent='Seedr: unreachable - will retry';
@@ -170,12 +168,6 @@ function fmtGB(b){ return (b/1073741824).toFixed(2)+' GB'; }
 function toggleSeedr(){
   const b=document.getElementById('seedrbox');
   b.style.display = b.style.display==='none' ? 'block' : 'none';
-}
-function showSeedrSteps(){
-  document.getElementById('seedrbox').style.display='block';
-  const s=document.getElementById('seedrsteps');
-  if(s&&s.scrollIntoView)s.scrollIntoView({behavior:'smooth',block:'center'});
-  return false;
 }
 async function saveSeedr(){
   const m=document.getElementById('seedrmsg');
