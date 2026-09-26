@@ -262,7 +262,9 @@ function stepper(x){
   const tl=x.timeline||[];
   const has=function(st){return tl.some(function(e){return e.stage===st;});};
   const st=x.status||'';
-  const direct=/fetching directly/i.test(st)||tl.some(function(e){return /fetching directly/i.test(e.text||'');});
+  // Prefer the pipeline's own classification (stored at intake) over text
+  // sniffing - a direct job should never show a Seedr step (his 4:50 rule).
+  const direct=x.kind?(x.kind==='direct'||x.kind==='direct-video'):(/fetching directly/i.test(st)||tl.some(function(e){return /fetching directly/i.test(e.text||'');}));
   const ready=has('ready')||x.state==='done';
   const readyEntry=tl.filter(function(e){return e.stage==='ready';}).pop();
   let readyUrl=null;
@@ -279,7 +281,9 @@ function stepper(x){
   function mk(done,cur){return done?'&#10003;':(cur?'&#9656;':'&#183;');}
   const out=[];
   function push(label,done,cur){out.push('<div class="step '+cls(done,cur)+'"><span class="m">'+mk(done,cur)+'</span>'+label+'</div>');}
-  if(!direct){
+  if(direct){
+    push('Connected to FileLu', fetching||ready||dlDone, !(fetching||ready||dlDone));
+  }else{
     push('Connected to Seedr', has('login')||dlDone||downloading, false);
   }
   push('Added to queue', true, false);
