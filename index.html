@@ -203,9 +203,11 @@ async function loadHeartbeat(){
     if(!r.ok)return;
     const x=await r.json();
     const el=document.getElementById('hb');
+    let active=0;
+    try{const jr=await fetch(API+'/api/jobs?filter=active',{headers:hdr()}); if(jr.ok){const jj=await jr.json(); active=(Array.isArray(jj)?jj:(jj.jobs||[])).length;}}catch(e){}
     if(x.age_minutes==null){el.textContent='Pipeline: no poll heartbeat yet';el.style.color='#f0883e';}
-    else if(x.age_minutes>20){el.textContent='Pipeline last ran '+x.age_minutes+' min ago - it may be down';el.style.color='#f85149';}
-    else{el.textContent='Pipeline ran '+x.age_minutes+' min ago';el.style.color='#8b949e';}
+    else if(active>0&&x.age_minutes>20){el.textContent='Pipeline last ran '+x.age_minutes+' min ago with active jobs - it may be down';el.style.color='#f85149';}
+    else{el.textContent='Pipeline ran '+x.age_minutes+' min ago'+(active?'':' (idle - normal)');el.style.color='#8b949e';}
   }catch(e){}
 }
 async function loadQuota(){
