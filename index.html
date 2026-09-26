@@ -89,6 +89,16 @@
   <input id="catcustom" type="text" placeholder="Custom folder, e.g. Movies/Telugu" style="display:none;margin-top:8px">
   <button id="go" onclick="submitJob()">Start download</button>
   <div id="msg"></div>
+  <details style="margin-top:16px;font-size:13px;color:#8b949e">
+    <summary style="cursor:pointer">How it works</summary>
+    <ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">
+      <li>Each line routes itself by content, not the URL: torrent bytes go to Seedr, everything else fetches straight to FileLu - even a forum attachment link that serves a .torrent.</li>
+      <li>The queue lives here, not in Seedr: as many jobs as fit under 5 GB run together, a job that doesn't fit waits as "held" and starts itself when space frees, and anything over 5 GB alone fails fast.</li>
+      <li>Waiting jobs show an X - tap to cancel. Once a job is moving, it's never interrupted.</li>
+      <li>Movies become "Name (Year)", TV episodes keep their tag - "Show (Year) S02E05". Language picks the folder. Direct links can be any file type: audio, docs, and apps route to their own folders.</li>
+      <li>Done and failed jobs hide under the filter chips. A weekly audit proposes library cleanups - nothing deletes without your approval.</li>
+    </ul>
+  </details>
   <div class="chips">
     <button data-f="active" class="on" onclick="setFilter('active',this)">Active</button>
     <button data-f="stalled" onclick="setFilter('stalled',this)">Stalled</button>
