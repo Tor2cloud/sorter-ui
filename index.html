@@ -69,8 +69,13 @@
     <button id="seedrsave" onclick="saveSeedr()" style="margin-top:8px;padding:10px">Save Seedr session</button>
     <div id="seedrmsg"></div>
   </div>
-  <label for="link">Links - one per line (magnet / .torrent / direct video). Mix freely - each line routes itself.</label>
+  <label for="link">Links - one per line (magnet / .torrent / direct). Mix freely - each line routes itself.</label>
   <textarea id="link" rows="4" placeholder="magnet:?xt=...&#10;https://site.com/file.torrent&#10;https://cdn.com/movie.mp4" style="width:100%;padding:12px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font-size:15px;font-family:monospace;resize:vertical"></textarea>
+  <div id="drop" onclick="document.getElementById('tfiles').click()" style="margin-top:10px;padding:14px;border:1px dashed #30363d;border-radius:8px;text-align:center;color:#8b949e;font-size:14px;cursor:pointer">
+    Or drop .torrent files here / tap to choose - they queue exactly like a .torrent link.
+    <span id="dropnames" style="display:block;color:#e6edf3;margin-top:4px"></span>
+  </div>
+  <input id="tfiles" type="file" accept=".torrent" multiple style="display:none" onchange="filesPicked(this.files)">
   <label for="cat">Category (FileLu folder)</label>
   <select id="cat">
     <option>Movies/English</option>
@@ -95,6 +100,27 @@
 const API='https://tor2cloud-sorter.divyaprabandam.workers.dev';
 
 let seedrState='unknown';
+let pickedFiles=[];
+function filesPicked(list){
+  pickedFiles=Array.from(list||[]).filter(function(f){return /\.torrent$/i.test(f.name);}).slice(0,10);
+  const dn=document.getElementById('dropnames');
+  dn.textContent=pickedFiles.length?('Queued: '+pickedFiles.map(function(f){return f.name;}).join(', ')):'';
+}
+function readB64(f){
+  return new Promise(function(res,rej){
+    const r=new FileReader();
+    r.onload=function(){res(String(r.result).split(',')[1]);};
+    r.onerror=rej;
+    r.readAsDataURL(f);
+  });
+}
+window.addEventListener('DOMContentLoaded',function(){
+  const dz=document.getElementById('drop');
+  if(!dz)return;
+  ['dragover','dragenter'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();dz.style.borderColor='#58a6ff';});});
+  ['dragleave','drop'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();dz.style.borderColor='#30363d';});});
+  dz.addEventListener('drop',function(e){filesPicked(e.dataTransfer.files);});
+});
 async function seedrHealth(){
   const el=document.getElementById('seedr');
   try{
@@ -192,17 +218,21 @@ async function submitJob(){
   }
   const link=document.getElementById('link').value.trim();
   const msg=document.getElementById('msg');
-  if(!link){msg.className='err';msg.textContent='Paste a link first.';return;}
+  if(!link&&!pickedFiles.length){msg.className='err';msg.textContent='Paste a link or drop a .torrent file first.';return;}
   document.getElementById('go').disabled=true;
   msg.className='';msg.textContent='Starting...';
   try{
-    const r=await fetch(API+'/api/new',{method:'POST',headers:{'content-type':'application/json',...hdr()},body:JSON.stringify({link,category:cat()})});
+    const files=[];
+    for(const f of pickedFiles){files.push({name:f.name,b64:await readB64(f)});}
+    const r=await fetch(API+'/api/new',{method:'POST',headers:{'content-type':'application/json',...hdr()},body:JSON.stringify({link,category:cat(),files})});
     const j=await r.json();
     if(r.status===401){lockOut();return;}
     if(!r.ok)throw new Error(j.error||r.status);
     if(j.created&&j.created.length>1){msg.textContent='Started '+j.created.length+' jobs: '+j.created.map(function(c){return '#'+c.number;}).join(', ')+'. Track them below.';}
     else{msg.textContent='Started. Track it here or on the issue: '+j.issue_url;}
     document.getElementById('link').value='';
+    pickedFiles=[];document.getElementById('dropnames').textContent='';
+    document.getElementById('tfiles').value='';
     loadJobs();
   }catch(e){msg.className='err';msg.textContent='Failed: '+e.message;}
   document.getElementById('go').disabled=false;
