@@ -68,14 +68,6 @@
   <div id="hb" style="font-size:12px;color:#8b949e;margin:-6px 0 8px"></div>
   <div id="seedr" class="warn">Seedr: checking...<a href="#" onclick="toggleSeedr();return false" id="seedrtoggle" style="display:none">refresh session</a></div>
   <div id="seedrbox" style="display:none">
-    <ol id="seedrsteps" style="margin:6px 0 8px;padding-left:20px;font-size:13px;color:#c9d1d9;line-height:1.7">
-      <li>Open <b>seedr.cc</b> and log in.</li>
-      <li>Press <b>F12</b> for DevTools, open the <b>Network</b> tab.</li>
-      <li>Reload the page, click any request to <b>seedr.cc/api/...</b>.</li>
-      <li>Under <b>Headers -&gt; Request Headers</b> find the <b>cookie:</b> line.</li>
-      <li>Copy the <b>whole value</b> after "cookie:" (it is long).</li>
-      <li>Paste it below and tap <b>Save Seedr session</b>.</li>
-    </ol>
     <textarea id="seedrcookie" rows="3" placeholder="Paste the cookie header from a logged-in seedr.cc tab: F12 -> Network -> click any /api request -> Headers -> Request Headers -> copy the whole cookie: value"></textarea>
     <button id="seedrsave" onclick="saveSeedr()" style="margin-top:8px;padding:10px">Save Seedr session</button>
     <div id="seedrmsg"></div>
