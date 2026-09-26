@@ -52,29 +52,84 @@
   .step .m{display:inline-block;width:16px}
   .openbtn{display:block;margin-top:10px;padding:12px;background:#238636;color:#fff;border-radius:8px;text-align:center;font-weight:600;text-decoration:none;font-size:15px}
   .heldline{font-size:13px;color:#d29922;margin-top:8px;font-weight:600}
+  :root{--surface:#161b22;--line:#30363d;--muted:#9da7b3;--accent:#3fb950}
+  body{max-width:760px;padding:24px 20px 64px}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #79c0ff;outline-offset:3px}
+  #gate{margin:15vh auto 0;padding:26px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+  #gate h1{margin:0 0 4px;font-size:24px}
+  #gate .subtle{margin:0 0 22px;color:var(--muted);font-size:14px}
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:4px 0 20px}
+  .top h1{margin:0;font-size:24px;line-height:1.2}
+  .top p{margin:5px 0 0;color:var(--muted);font-size:14px}
+  .panel{padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);margin:0 0 18px}
+  .panel h2{font-size:17px;color:#e6edf3;margin:0 0 3px}
+  .panel .hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .statusgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 18px}
+  .statusitem{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-height:74px;overflow-wrap:anywhere}
+  .statuslabel{display:block;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+  #quota,#hb{font-size:13px!important;margin:0!important;line-height:1.35;color:#e6edf3}
+  #seedr{margin:0 0 18px;padding:11px 14px;border-radius:12px;background:var(--surface);font-size:13px;min-height:44px}
+  #seedr a{float:none;display:inline-block;margin-left:8px}
+  #seedr{overflow-wrap:anywhere}
+  .job,.tl,.tl div{min-width:0;max-width:100%}
+  #seedrbox{margin:-8px 0 18px;padding:12px;border:1px solid var(--line);border-radius:12px}
+  #link{min-height:116px;resize:vertical}
+  #drop{margin-top:12px!important;padding:16px!important;border-radius:10px!important;color:#c9d1d9!important}
+  #go{margin-top:18px}
+  #msg{min-height:22px}
+  .jobshead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:6px}
+  .jobshead h2{font-size:18px;color:#e6edf3;margin:8px 0 4px}
+  .jobshead span{font-size:12px;color:var(--muted)}
+  .chips{margin:12px 0 16px;overflow-x:auto;padding:2px 0 5px}
+  .chips button{min-width:0;min-height:44px;white-space:nowrap;color:#c9d1d9;padding:8px 4px}
+  .chips button.on{background:#1f6feb;border-color:#388bfd;color:#fff}
+  .job{border-radius:14px;padding:16px;margin-top:12px}
+  .job-title{font-size:15px;font-weight:600;line-height:1.4;display:block;padding-right:42px;overflow-wrap:anywhere}
+  .job-top{display:flex;align-items:center;gap:8px;margin:8px 0 6px}
+  .badge{display:inline-flex;border-radius:99px;padding:3px 9px;font-size:12px;font-weight:600;background:#263341;color:#c9d1d9}
+  .job.done .badge{background:#173b26;color:#7ee787}
+  .job.failed .badge,.job.stalled .badge{background:#4b2428;color:#ffa198}
+  .job.held .badge{background:#4d3817;color:#e3b341}
+  .job .bar{height:7px;margin:12px 0}
+  .job .steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;margin:10px 0}
+  .job .step{font-size:12px;margin:0}
+  .tl{margin-top:14px;padding-left:12px}
+  .tl div{line-height:1.45;margin:7px 0;overflow-wrap:anywhere;word-break:break-word}
+  .xbtn{width:40px;height:40px;top:10px;right:10px}
+  .openbtn{display:inline-block;min-height:44px;padding:11px 16px}
+  .help{margin:18px 0;color:var(--muted);font-size:13px}
+  .help summary{min-height:44px;padding:10px 0;cursor:pointer}
+  @media(max-width:480px){body{padding:16px 14px 48px}.top h1{font-size:21px}.panel{padding:16px}.statusitem{min-height:72px;padding:10px}.job .steps{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){.bar>div{transition:none}}
 </style></head><body>
 
 <div id="gate">
   <h1>&#8675; Tor2cloud Sorter</h1>
+  <p class="subtle">Your private file queue.</p>
   <label for="pw">Passcode</label>
   <input id="pw" type="password" placeholder="Required" autocomplete="off">
   <button id="unlock" onclick="unlock()">Unlock</button>
-  <div class="err" id="gateerr"></div>
+  <div class="err" id="gateerr" role="alert" aria-live="polite"></div>
 </div>
 
 <div id="app">
-  <h1>&#8675; Tor2cloud Sorter</h1>
-  <div id="quota"></div>
-  <div id="hb" style="font-size:12px;color:#8b949e;margin:-6px 0 8px"></div>
+  <header class="top"><div><h1>&#8675; Tor2cloud Sorter</h1><p>Send files to FileLu and track each job here.</p></div></header>
+  <div class="statusgrid" aria-label="Service status">
+    <div class="statusitem"><span class="statuslabel">FileLu storage</span><div id="quota">Checking storage...</div></div>
+    <div class="statusitem"><span class="statuslabel">Pipeline</span><div id="hb">Checking last run...</div></div>
+  </div>
   <div id="seedr" class="warn">Seedr: checking...<a href="#" onclick="toggleSeedr();return false" id="seedrtoggle" style="display:none">refresh session</a></div>
   <div id="seedrbox" style="display:none">
     <textarea id="seedrcookie" rows="3" placeholder="Paste the cookie header from a logged-in seedr.cc tab: F12 -> Network -> reload -> click the 'files' request (first one in the list) -> Headers -> Request Headers -> copy the whole cookie: value"></textarea>
     <button id="seedrsave" onclick="saveSeedr()" style="margin-top:8px;padding:10px">Save Seedr session</button>
     <div id="seedrmsg"></div>
   </div>
-  <label for="link">Links - one per line (magnet / .torrent / direct). Mix freely - each line routes itself.</label>
+  <section class="panel" aria-labelledby="newjob"><h2 id="newjob">New transfer</h2><p class="hint">Paste a magnet, torrent URL, or direct link. Use one line per file.</p>
+  <label for="link">Links</label>
   <textarea id="link" rows="4" placeholder="magnet:?xt=...&#10;https://site.com/file.torrent&#10;https://cdn.com/movie.mp4" style="width:100%;padding:12px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font-size:15px;font-family:monospace;resize:vertical"></textarea>
-  <div id="drop" onclick="document.getElementById('tfiles').click()" style="margin-top:10px;padding:14px;border:1px dashed #30363d;border-radius:8px;text-align:center;color:#8b949e;font-size:14px;cursor:pointer">
+  <div id="drop" role="button" tabindex="0" aria-label="Choose torrent files" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('tfiles').click()}" onclick="document.getElementById('tfiles').click()" style="margin-top:10px;padding:14px;border:1px dashed #30363d;border-radius:8px;text-align:center;color:#8b949e;font-size:14px;cursor:pointer">
     Or drop .torrent files here / tap to choose - they queue exactly like a .torrent link.
     <span id="dropnames" style="display:block;color:#e6edf3;margin-top:4px"></span>
   </div>
@@ -89,8 +144,9 @@
   </select>
   <input id="catcustom" type="text" placeholder="Custom folder, e.g. Movies/Telugu" style="display:none;margin-top:8px">
   <button id="go" onclick="submitJob()">Start download</button>
-  <div id="msg"></div>
-  <details style="margin-top:16px;font-size:13px;color:#8b949e">
+  <div id="msg" role="status" aria-live="polite"></div></section>
+  <div class="jobshead"><h2>Transfers</h2><span>Updates every 10 seconds</span></div>
+  <details class="help">
     <summary style="cursor:pointer">How it works</summary>
     <ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">
       <li>Each line routes itself by content, not the URL: torrent bytes go to Seedr, everything else fetches straight to FileLu - even a forum attachment link that serves a .torrent.</li>
@@ -100,13 +156,13 @@
       <li>Done and failed jobs hide under the filter chips. A weekly audit proposes library cleanups - nothing deletes without your approval.</li>
     </ul>
   </details>
-  <div class="chips">
+  <div class="chips" role="group" aria-label="Filter transfers">
     <button data-f="active" class="on" onclick="setFilter('active',this)">Active</button>
     <button data-f="stalled" onclick="setFilter('stalled',this)">Stalled</button>
     <button data-f="done" onclick="setFilter('done',this)">Done</button>
     <button data-f="failed" onclick="setFilter('failed',this)">Failed</button>
   </div>
-  <div id="jobs">loading...</div>
+  <div id="jobs">Loading transfers...</div>
 </div>
 
 <script>
@@ -186,7 +242,7 @@ function hdr(){return {'x-ui-passcode':(localStorage.getItem('t2c_pw')||'')};}
 let curFilter='active';
 function setFilter(f,btn){
   curFilter=f;
-  document.querySelectorAll('.chips button').forEach(b=>b.classList.toggle('on',b===btn));
+  document.querySelectorAll('.chips button').forEach(b=>{const on=b===btn;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
   loadJobs();
 }
 async function loadHeartbeat(){
@@ -197,9 +253,9 @@ async function loadHeartbeat(){
     const el=document.getElementById('hb');
     let active=0;
     try{const jr=await fetch(API+'/api/jobs?filter=active',{headers:hdr()}); if(jr.ok){const jj=await jr.json(); active=(Array.isArray(jj)?jj:(jj.jobs||[])).length;}}catch(e){}
-    if(x.age_minutes==null){el.textContent='Pipeline: no poll heartbeat yet';el.style.color='#f0883e';}
-    else if(active>0&&x.age_minutes>20){el.textContent='Pipeline last ran '+x.age_minutes+' min ago with active jobs - it may be down';el.style.color='#f85149';}
-    else{el.textContent='Pipeline ran '+x.age_minutes+' min ago'+(active?'':' (idle - normal)');el.style.color='#8b949e';}
+    if(x.age_minutes==null){el.textContent='No poll heartbeat yet';el.style.color='#f0883e';}
+    else if(active>0&&x.age_minutes>20){el.textContent='Last ran '+x.age_minutes+' min ago with active jobs - it may be down';el.style.color='#f85149';}
+    else{el.textContent='Last ran '+x.age_minutes+' min ago'+(active?'':' (idle - normal)');el.style.color='#8b949e';}
   }catch(e){}
 }
 async function loadQuota(){
@@ -207,7 +263,7 @@ async function loadQuota(){
     const r=await fetch(API+'/api/quota',{headers:hdr()});
     if(!r.ok)return;
     const q=await r.json();
-    if(q.storage_used!=null)document.getElementById('quota').textContent='FileLu: '+q.storage_used+' / '+q.storage+' GB used';
+    if(q.storage_used!=null)document.getElementById('quota').textContent=q.storage_used+' / '+q.storage+' GB used';
   }catch(e){}
 }
 async function unlock(){
@@ -285,7 +341,8 @@ function bar(pct){
   pct=Math.max(0,Math.min(100,pct|0));
   return '<div class="bar"><div style="width:'+pct+'%"></div></div>';
 }
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeUrl(s){try{const u=new URL(String(s),location.href);return /^https?:$/.test(u.protocol)?esc(u.href):'#';}catch(e){return '#';}}
 function fmt(ts){
   try{return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}catch(e){return '';}
 }
@@ -306,7 +363,17 @@ function stepper(x){
   const ready=has('ready')||x.state==='done';
   const readyEntry=tl.filter(function(e){return e.stage==='ready';}).pop();
   let readyUrl=null;
-  if(readyEntry){const m=/(https?:\/\/\S+)/.exec(readyEntry.text||'');if(m)readyUrl=m[1];}
+  if(readyEntry){
+    // The API currently stores a human-readable "Ready: URL" line, sometimes
+    // with spaces and HTML entities in the filename. Keep the whole URL.
+    const raw=String(readyEntry.text||'').replace(/^.*?Ready:\s*/i,'').trim();
+    if(/^https?:\/\//i.test(raw)){
+      const decoded=raw.replace(/&#(x[0-9a-f]+|[0-9]+);/gi,function(_,n){
+        return String.fromCodePoint(n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):parseInt(n,10));
+      }).replace(/&amp;/gi,'&');
+      readyUrl=decoded;
+    }
+  }
   if(x.state==='cancelled'){
     return '<div class="heldline">Cancelled - removed from the queue</div>';
   }
@@ -331,24 +398,27 @@ function stepper(x){
   if(!direct){
     push('Downloading'+ (downloading?pctTxt:''), dlDone, downloading&&!dlDone);
   }
-  push('Saving to FileLu'+(fetching?pctTxt:''), ready||(fetching&&x.pct>=100), fetching&&x.pct<100);
+  push('Saving to FileLu'+(fetching?pctTxt:''), ready, fetching&&!ready);
   push('Verifying', ready, fetching&&x.pct>=100&&!ready);
   if(!direct){
-    push('Cleaning up', has('seedr-deleted')||ready, false);
+    push('Cleaning up', has('seedr-deleted'), ready&&!has('seedr-deleted'));
   }
   push('Ready - tap to open', ready, false);
   let html='<div class="steps">'+out.join('')+'</div>';
-  if(ready&&readyUrl){html+='<a class="openbtn" href="'+readyUrl+'" target="_blank" rel="noopener">Ready - tap to open</a>';}
+  if(ready&&readyUrl){html+='<a class="openbtn" href="'+safeUrl(readyUrl)+'" target="_blank" rel="noopener noreferrer">Ready - tap to open</a>';}
   return html;
 }
 function renderJobs(j){
   const box=document.getElementById('jobs');
   if(!j.length){box.innerHTML='<div class="meta">'+(curFilter==='active'?'No active jobs. Paste a link above to start one.':'No '+curFilter+' jobs.')+'</div>';return;}
   box.innerHTML=j.map(function(x){
-    const xbtn=x.state==='held'?'<button class="xbtn" title="Cancel this queued job" onclick="cancelJob('+x.num+',this)">&times;</button>':'';
-    return '<div class="job '+x.state+'">'+xbtn+'<a href="'+x.url+'">'+esc(x.title)+'</a>'
-      +bar(x.pct)+(x.thumb?'<img class="thumb" src="'+x.thumb+'" alt="">':'')
-      +stepper(x)+timeline(x.timeline)+'</div>';
+    const xbtn=x.state==='held'?'<button class="xbtn" aria-label="Cancel queued job '+Number(x.num)+'" title="Cancel this queued job" onclick="cancelJob('+Number(x.num)+',this)">&times;</button>':'';
+    const state=String(x.state||'active').replace(/[^a-z-]/g,'');
+    const label=state==='held'?'Waiting for space':state==='done'?'Ready':state==='failed'?'Failed':state==='stalled'?'Stalled':state==='cancelled'?'Cancelled':'In progress';
+    return '<article class="job '+state+'">'+xbtn+'<a class="job-title" href="'+safeUrl(x.url)+'">'+esc(x.title)+'</a>'
+      +'<div class="job-top"><span class="badge">'+label+'</span></div>'
+      +bar(x.pct)+(x.thumb?'<img class="thumb" src="'+safeUrl(x.thumb)+'" alt="">':'')
+      +stepper(x)+timeline(x.timeline)+'</article>';
   }).join('');
 }
 async function loadJobs(){
