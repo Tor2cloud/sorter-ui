@@ -245,18 +245,48 @@ function setFilter(f,btn){
   document.querySelectorAll('.chips button').forEach(b=>{const on=b===btn;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
   loadJobs();
 }
+let wakeRequestedAt=0;
+let wakeBaselineAge=null;
+const WAKE_WINDOW_MS=20*60*1000;
 async function loadHeartbeat(){
+  const el=document.getElementById('hb');
   try{
-    const r=await fetch(API+'/api/heartbeat',{headers:hdr()});
-    if(!r.ok)return;
-    const x=await r.json();
-    const el=document.getElementById('hb');
-    let active=0;
-    try{const jr=await fetch(API+'/api/jobs?filter=active',{headers:hdr()}); if(jr.ok){const jj=await jr.json(); active=(Array.isArray(jj)?jj:(jj.jobs||[])).length;}}catch(e){}
-    if(x.age_minutes==null){el.textContent='No poll heartbeat yet';el.style.color='#f0883e';}
-    else if(active>0&&x.age_minutes>20){el.textContent='Last ran '+x.age_minutes+' min ago with active jobs - it may be down';el.style.color='#f85149';}
-    else{el.textContent='Last ran '+x.age_minutes+' min ago'+(active?'':' (idle - normal)');el.style.color='#8b949e';}
-  }catch(e){}
+    const [hr,jr]=await Promise.all([
+      fetch(API+'/api/heartbeat',{headers:hdr()}),
+      fetch(API+'/api/jobs?filter=active',{headers:hdr()})
+    ]);
+    if(hr.status===401||jr.status===401){lockOut();return;}
+    if(!hr.ok||!jr.ok)throw new Error('status unavailable');
+    const x=await hr.json();
+    const jj=await jr.json();
+    const active=(Array.isArray(jj)?jj:(jj.jobs||[])).length;
+    const age=Number(x.age_minutes);
+    const validAge=x.age_minutes!=null&&Number.isFinite(age);
+    const freshSinceRequest=wakeRequestedAt&&validAge&&
+      (wakeBaselineAge==null ? age<2 : age+1<wakeBaselineAge);
+    if(freshSinceRequest){wakeRequestedAt=0;wakeBaselineAge=null;}
+    if(!active&&wakeRequestedAt&&Date.now()-wakeRequestedAt<WAKE_WINDOW_MS){
+      // /api/jobs can lag a newly accepted issue; don't call it idle yet.
+      el.textContent='Waking up - waiting for GitHub to start the poller';
+      el.style.color='#f0883e';
+    }else if(!active){
+      wakeRequestedAt=0;wakeBaselineAge=null;
+      el.textContent='Idle (hibernating)';
+      el.style.color='#8b949e';
+    }else if(wakeRequestedAt&&Date.now()-wakeRequestedAt<WAKE_WINDOW_MS){
+      el.textContent='Waking up - waiting for GitHub to start the poller';
+      el.style.color='#f0883e';
+    }else if(!validAge||age>20){
+      el.textContent='Jobs active, but no recent poll. Check Actions.';
+      el.style.color='#f85149';
+    }else{
+      el.textContent='Last ran '+age+' min ago';
+      el.style.color='#8b949e';
+    }
+  }catch(e){
+    el.textContent='Status unavailable - try again later';
+    el.style.color='#f0883e';
+  }
 }
 async function loadQuota(){
   try{
@@ -311,8 +341,13 @@ async function submitJob(){
     const j=await r.json();
     if(r.status===401){lockOut();return;}
     if(!r.ok)throw new Error(j.error||r.status);
-    if(j.created&&j.created.length>1){msg.textContent='Started '+j.created.length+' jobs: '+j.created.map(function(c){return '#'+c.number;}).join(', ')+'. Track them below.';}
-    else{msg.textContent='Started. Track it here or on the issue: '+j.issue_url;}
+    // /api/new confirms tracking issues, not that GitHub has begun the poll run.
+    wakeBaselineAge=null;
+    wakeRequestedAt=Date.now();
+    msg.textContent='Transfer accepted. Waking up - waiting for GitHub to start the poller.';
+    loadHeartbeat();
+    if(j.created&&j.created.length>1){msg.textContent='Queued '+j.created.length+' jobs: '+j.created.map(function(c){return '#'+c.number;}).join(', ')+'. Waking up - waiting for GitHub.';}
+    else{msg.textContent='Transfer accepted. Waking up - waiting for GitHub. Track it here or on the issue: '+j.issue_url;}
     document.getElementById('link').value='';
     pickedFiles=[];document.getElementById('dropnames').textContent='';
     document.getElementById('tfiles').value='';
