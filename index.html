@@ -43,6 +43,13 @@
   #seedrmsg.ok{color:#3fb950}
   #seedrmsg.err{color:#f85149}
   .thumb{width:64px;height:64px;object-fit:cover;border-radius:6px;margin-top:8px;display:block}
+  .steps{margin-top:8px}
+  .step{font-size:13px;color:#6e7681;margin:2px 0}
+  .step.done{color:#3fb950}
+  .step.cur{color:#e6edf3;font-weight:600}
+  .step .m{display:inline-block;width:16px}
+  .openbtn{display:block;margin-top:10px;padding:12px;background:#238636;color:#fff;border-radius:8px;text-align:center;font-weight:600;text-decoration:none;font-size:15px}
+  .heldline{font-size:13px;color:#d29922;margin-top:8px;font-weight:600}
 </style></head><body>
 
 <div id="gate">
@@ -62,8 +69,8 @@
     <button id="seedrsave" onclick="saveSeedr()" style="margin-top:8px;padding:10px">Save Seedr session</button>
     <div id="seedrmsg"></div>
   </div>
-  <label for="link">Magnet / .torrent / direct video link</label>
-  <input id="link" type="url" placeholder="magnet:?xt=... or https://..." autocomplete="off">
+  <label for="link">Links - one per line (magnet / .torrent / direct video). Mix freely - each line routes itself.</label>
+  <textarea id="link" rows="4" placeholder="magnet:?xt=...&#10;https://site.com/file.torrent&#10;https://cdn.com/movie.mp4" style="width:100%;padding:12px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font-size:15px;font-family:monospace;resize:vertical"></textarea>
   <label for="cat">Category (FileLu folder)</label>
   <select id="cat">
     <option>Movies/English</option>
@@ -193,7 +200,8 @@ async function submitJob(){
     const j=await r.json();
     if(r.status===401){lockOut();return;}
     if(!r.ok)throw new Error(j.error||r.status);
-    msg.textContent='Started. Track it here or on the issue: '+j.issue_url;
+    if(j.created&&j.created.length>1){msg.textContent='Started '+j.created.length+' jobs: '+j.created.map(function(c){return '#'+c.number;}).join(', ')+'. Track them below.';}
+    else{msg.textContent='Started. Track it here or on the issue: '+j.issue_url;}
     document.getElementById('link').value='';
     loadJobs();
   }catch(e){msg.className='err';msg.textContent='Failed: '+e.message;}
@@ -220,13 +228,51 @@ function timeline(tl){
     return '<div class="'+warn.trim()+'"><span class="t">'+fmt(e.ts)+'</span>'+esc(e.text)+'</div>';
   }).join('')+'</div>';
 }
+function stepper(x){
+  const tl=x.timeline||[];
+  const has=function(st){return tl.some(function(e){return e.stage===st;});};
+  const st=x.status||'';
+  const direct=/fetching directly/i.test(st)||tl.some(function(e){return /fetching directly/i.test(e.text||'');});
+  const ready=has('ready')||x.state==='done';
+  const readyEntry=tl.filter(function(e){return e.stage==='ready';}).pop();
+  let readyUrl=null;
+  if(readyEntry){const m=/(https?:\/\/\S+)/.exec(readyEntry.text||'');if(m)readyUrl=m[1];}
+  if(x.state==='held'){
+    return '<div class="heldline">Waiting for space - will start itself</div>'
+      +'<div class="steps"><div class="step done"><span class="m">&#10003;</span>Added to queue</div></div>';
+  }
+  const downloading=/Seedr downloading/.test(st);
+  const fetching=/FileLu fetching/.test(st);
+  const dlDone=has('download-complete')||fetching||ready;
+  const pctTxt=(x.pct>0&&x.pct<100)?' - '+x.pct+'%':'';
+  function cls(done,cur){return done?'done':(cur?'cur':'');}
+  function mk(done,cur){return done?'&#10003;':(cur?'&#9656;':'&#183;');}
+  const out=[];
+  function push(label,done,cur){out.push('<div class="step '+cls(done,cur)+'"><span class="m">'+mk(done,cur)+'</span>'+label+'</div>');}
+  if(!direct){
+    push('Connected to Seedr', has('login')||dlDone||downloading, false);
+  }
+  push('Added to queue', true, false);
+  if(!direct){
+    push('Downloading'+ (downloading?pctTxt:''), dlDone, downloading&&!dlDone);
+  }
+  push('Saving to FileLu'+(fetching?pctTxt:''), ready||(fetching&&x.pct>=100), fetching&&x.pct<100);
+  push('Verifying', ready, fetching&&x.pct>=100&&!ready);
+  if(!direct){
+    push('Cleaning up', has('seedr-deleted')||ready, false);
+  }
+  push('Ready - tap to open', ready, false);
+  let html='<div class="steps">'+out.join('')+'</div>';
+  if(ready&&readyUrl){html+='<a class="openbtn" href="'+readyUrl+'" target="_blank" rel="noopener">Ready - tap to open</a>';}
+  return html;
+}
 function renderJobs(j){
   const box=document.getElementById('jobs');
   if(!j.length){box.innerHTML='<div class="meta">'+(curFilter==='active'?'No active jobs. Paste a link above to start one.':'No '+curFilter+' jobs.')+'</div>';return;}
   box.innerHTML=j.map(function(x){
     return '<div class="job '+x.state+'"><a href="'+x.url+'">'+esc(x.title)+'</a>'
       +bar(x.pct)+(x.thumb?'<img class="thumb" src="'+x.thumb+'" alt="">':'')
-      +timeline(x.timeline)+'</div>';
+      +stepper(x)+timeline(x.timeline)+'</div>';
   }).join('');
 }
 async function loadJobs(){
